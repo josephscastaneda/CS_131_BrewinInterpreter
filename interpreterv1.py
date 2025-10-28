@@ -1,9 +1,7 @@
 from intbase import InterpreterBase, ErrorType
 from brewparse import parse_program
 from brew_variable import create_variable_map, variable_exists, insert_varname, variable_assigned
-from brew_function import get_func_list
-from brew_statement import get_statements
-from element import Element
+
 
 class Interpreter(InterpreterBase):
     def __init__(self, console_output=True, inp=None, trace_output=False):
@@ -15,6 +13,9 @@ class Interpreter(InterpreterBase):
         self.var_to_type = create_variable_map()
         self.func_nodes = ast.dict['functions']
         main_node = self.func_nodes[0]
+        if main_node.dict['name'] != 'main':
+            super().error(ErrorType.NAME_ERROR)
+            return
         self.run_func(main_node)
 
     def run_func(self, func_node):
@@ -193,9 +194,15 @@ class Interpreter(InterpreterBase):
                     super().error(ErrorType.TYPE_ERROR)
                     return
                 if op.elem_type == self.QUALIFIED_NAME_NODE:
-                    if variable_assigned(op.dict['name'], self.var_to_value) == False or self.var_to_type[op.dict['name']] != 'int':
+                    if variable_assigned(op.dict['name'], self.var_to_value) == False:
+                        super().error(ErrorType.NAME_ERROR)
+                    if self.var_to_type[op.dict['name']] != 'int':
                         super().error(ErrorType.TYPE_ERROR)
                     return self.var_to_value[op.dict['name']]
+                if op.elem_type == self.FCALL_NODE:
+                    if op.dict['name'] != 'inputi':
+                        super().error(ErrorType.TYPE_ERROR)
+                    return self.call_func(op)
                 return op.dict['val']
             return self.eval_binary(op.dict['op1'], op.dict['op2'], op.elem_type)
         if operation == '+':
@@ -229,7 +236,10 @@ class Interpreter(InterpreterBase):
             if len(args) > 1:
                 super().error(ErrorType.NAME_ERROR)
             if len(args) == 1:
-                super().output(str(args[0].dict['val']))
-            return super().get_input()
+                if args[0].elem_type == self.QUALIFIED_NAME_NODE:
+                    super().output(str(self.var_to_value[args[0].dict['name']]))
+                else:
+                    super().output(str(args[0].dict['val']))
+            return int(super().get_input())
        
         
