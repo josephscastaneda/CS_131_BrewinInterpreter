@@ -5,6 +5,7 @@ class FunctionEnv():
     def __init__(self, func_name):
         self.func_name = func_name
         self.funcscope = {}
+        self.types = {}
 
     def insert_varname(self, varname):
         if self.variable_exists(varname):
@@ -27,5 +28,12 @@ class FunctionEnv():
             return True
     def get_func_name(self):
         return self.func_name
+    def add_type(self, varname, type):
+        self.types[varname] = type
+    def get_type(self,varname):
+        return self.types[varname]
+    def get_var(self, varname):
+        return self.funcscope[varname]
+    
     
     
