@@ -63,9 +63,14 @@ class Interpreter(InterpreterBase):
         result = self.eval_exp(state_node)
         self.envs_stack[-1].assign_variable(var_name,result)
 
-    def eval_exp(self, state_node):
-        var_holder_name = exp_node.dict['var']
-        exp_node = state_node.dict['expression']
+    def eval_exp(self, state_node, isPrint=False):
+        if isPrint == False:
+            var_holder_name = state_node.dict['var']
+            exp_node = state_node.dict['expression']
+        else:
+            #Case only happens on a print function call evaluating an expression, so having a None var is okay
+            var_holder_name = None
+            exp_node = state_node
 
         if exp_node.elem_type == self.INT_NODE:
             result = exp_node.dict['val']
@@ -103,16 +108,22 @@ class Interpreter(InterpreterBase):
             return result
         
         if exp_node.elem_type == self.NEG_NODE:
-            #TO-DO
+            
             return
         
         if exp_node.elem_type == '*':
-            #TO-DO
-            return
+            op1 = exp_node.dict['op1']
+            op2 = exp_node.dict['op2']
+            result = self.eval_binary(op1, op2, '*')
+            self.envs_stack[-1].add_type(var_holder_name, self.INT_NODE)
+            return result
         
         if exp_node.elem_type == '/':
-            #TO-DO
-            return
+            op1 = exp_node.dict['op1']
+            op2 = exp_node.dict['op2']
+            result = self.eval_binary(op1, op2, '/')
+            self.envs_stack[-1].add_type(var_holder_name, self.INT_NODE)
+            return result
         
         if exp_node.elem_type == '==':
             #TO-DO BOTH BOOLEAN TYPES, STRING TYPES AND INT TYPES
@@ -155,17 +166,18 @@ class Interpreter(InterpreterBase):
                 super().error(ErrorType.NAME_ERROR)
                 return
             result = self.envs_stack[-1].get_var(qname_name)
-            qname_type = self.envs_stack.get_type(qname_name) 
-            self.envs_stack.add_type(var_holder_name, qname_type)
+            qname_type = self.envs_stack[-1].get_type(qname_name) 
+            self.envs_stack[-1].add_type(var_holder_name, qname_type)
             return result
         
         if exp_node.elem_type == self.FCALL_NODE:
             result = self.call_func(exp_node)
+            self.envs_stack[-1].add_type(var_holder_name, self.INT_NODE)
             return result
         
     def eval_binary(self, op1, op2, operation):
         def getop(op):
-            if op.elem_type != '+' and op.elem_type != '-':
+            if op.elem_type != '+' and op.elem_type != '-' and op.elem_type != '*' and op.elem_type != '/':
                 if op.elem_type == self.STRING_NODE:
                     super().error(ErrorType.TYPE_ERROR)
                     return
@@ -185,6 +197,10 @@ class Interpreter(InterpreterBase):
             return getop(op1) + getop(op2)
         if operation == '-':
             return getop(op1) - getop(op2)
+        if operation == '*':
+            return getop(op1) * getop(op2)
+        if operation == '/':
+            return getop(op1) / getop(op2)
      
     def call_func(self, state_node):
         func_name = state_node.dict['name']
@@ -196,16 +212,18 @@ class Interpreter(InterpreterBase):
             args = state_node.dict['args']
             out_str = ""
             for arg in args:
-                if arg.elem_type == self.STRING_NODE or arg.elem_type == self.INT_NODE:
-                    out_str = out_str + str(arg.dict['val'])
-                elif arg.elem_type == self.QUALIFIED_NAME_NODE:
-                    if variable_exists(arg.dict['name'], self.var_to_value) == False:
-                        super().error(ErrorType.NAME_ERROR)
-                        return
-                    if variable_assigned(arg.dict['name'], self.var_to_value) == False:
-                        super().error(ErrorType.NAME_ERROR)
-                        return
-                    out_str = out_str + str(self.var_to_value[arg.dict['name']])
+                # if arg.elem_type == self.STRING_NODE or arg.elem_type == self.INT_NODE:
+                #     out_str = out_str + str(arg.dict['val'])
+                # elif arg.elem_type == self.QUALIFIED_NAME_NODE:
+                #     if self.envs_stack[-1].variable_exists(arg.dict['name']) == False:
+                #         super().error(ErrorType.NAME_ERROR)
+                #         return
+                #     if self.envs_stack[-1].variable_assigned(arg.dict['name']) == False:
+                #         super().error(ErrorType.NAME_ERROR)
+                #         return
+                #     out_str = out_str + str(self.envs_stack[-1].get_var(arg.dict['name']))
+                result = self.eval_exp(arg,True)
+                out_str = out_str + str(result)
             super().output(out_str)
 
         if func_name == 'inputi':
