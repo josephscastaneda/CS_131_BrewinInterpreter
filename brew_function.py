@@ -1,5 +1,5 @@
 from element import Element
-
+from intbase import ErrorType
 
 class FunctionEnv():
     def __init__(self, func_name):
@@ -15,7 +15,9 @@ class FunctionEnv():
     def variable_exists(self, varname):
         return varname in self.funcscope
     def variable_assigned(self,varname):
-        if self.funcscope[varname] == None or self.variable_exists(varname) == False:
+        if self.variable_exists(varname) == False:
+            return False
+        elif self.funcscope[varname] == None:
             return False
         else:
             return True
